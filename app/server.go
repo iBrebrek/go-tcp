@@ -37,18 +37,23 @@ func handleConnection(conn net.Conn) {
 	conn.Write([]byte(resp))
 }
 
-func parseRequest(request string) (method, path, body string) {
+func parseRequest(request string) (method string, path string, headers map[string]string, body string) {
 	fmt.Println("~~~ request ~~~\n", request)
 	requestParts := strings.Split(request, "\r\n")
 	requestLine := requestParts[0]
 	lineParts := strings.Split(requestLine, " ")
 	method = lineParts[0]
 	path = lineParts[1]
-	body = requestParts[2]
+	body = requestParts[len(requestParts)-1]
+	headers = make(map[string]string)
+	for i := 1; i < len(requestParts)-1; i++ {
+		key, value, _ := strings.Cut(requestParts[i], ":")
+		headers[strings.Trim(key, " ")] = strings.Trim(value, " ")
+	}
 	return // named result parameters
 }
 
-func dispatch(method string, path string, body string) string {
+func dispatch(method string, path string, headers map[string]string, body string) string {
 	if method != "GET" {
 		return "HTTP/1.1 405 Method Not Allowed\r\n\r\n"
 	}
@@ -57,12 +62,19 @@ func dispatch(method string, path string, body string) string {
 		return "HTTP/1.1 200 OK\r\n\r\n"
 	} else if strings.HasPrefix(path, "/echo/") {
 		text := path[len("/echo/"):]
-		return "HTTP/1.1 200 OK\r\n" +
-			"Content-Type: text/plain\r\n" +
-			"Content-Length: " + fmt.Sprint(len(text)) +
-			"\r\n" +
-			"\r\n" + text
+		return textResponse(text)
+	} else if path == "/user-agent" {
+		agent := headers["User-Agent"]
+		return textResponse(agent)
 	} else {
 		return "HTTP/1.1 404 Not Found\r\n\r\n"
 	}
+}
+
+func textResponse(text string) string {
+	return "HTTP/1.1 200 OK\r\n" +
+		"Content-Type: text/plain\r\n" +
+		"Content-Length: " + fmt.Sprint(len(text)) +
+		"\r\n" +
+		"\r\n" + text
 }
