@@ -7,18 +7,25 @@ import (
 )
 
 func main() {
-	// You can use print statements as follows for debugging, they'll be visible when running tests.
 	fmt.Println("Logs from your program will appear here!")
-	
+
 	l, err := net.Listen("tcp", "0.0.0.0:4221")
 	if err != nil {
 		fmt.Println("Failed to bind to port 4221")
 		os.Exit(1)
 	}
-	
-	_, err = l.Accept()
+	fmt.Println("Listening")
+
+	conn, err := l.Accept()
+	fmt.Println("Accepted")
 	if err != nil {
 		fmt.Println("Error accepting connection: ", err.Error())
 		os.Exit(1)
 	}
+	handleConnection(conn)
+	fmt.Println("Handled")
+}
+
+func handleConnection(conn net.Conn) {
+	conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
 }
