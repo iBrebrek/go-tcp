@@ -55,6 +55,13 @@ func dispatch(method string, path string, body string) string {
 
 	if path == "/" || path == "/index.html" {
 		return "HTTP/1.1 200 OK\r\n\r\n"
+	} else if strings.HasPrefix(path, "/echo/") {
+		text := path[len("/echo/"):]
+		return "HTTP/1.1 200 OK\r\n" +
+			"Content-Type: text/plain\r\n" +
+			"Content-Length: " + fmt.Sprint(len(text)) +
+			"\r\n" +
+			"\r\n" + text
 	} else {
 		return "HTTP/1.1 404 Not Found\r\n\r\n"
 	}
