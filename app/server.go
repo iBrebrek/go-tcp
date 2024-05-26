@@ -24,8 +24,8 @@ func main() {
 			fmt.Println("Error accepting connection: ", err.Error())
 			continue
 		}
-		handleConnection(conn)
-		fmt.Println("Handled")
+		go handleConnection(conn)
+		fmt.Println("Handling started")
 	}
 }
 
@@ -35,6 +35,7 @@ func handleConnection(conn net.Conn) {
 	request := string(buffer)
 	resp := dispatch(parseRequest(request))
 	conn.Write([]byte(resp))
+	fmt.Println("Handled")
 }
 
 func parseRequest(request string) (method string, path string, headers map[string]string, body string) {
