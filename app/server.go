@@ -56,7 +56,7 @@ func parseRequest(request string) (method string, path string, headers map[strin
 	headers = make(map[string]string)
 	for i := 1; i < len(requestParts)-1; i++ {
 		key, value, _ := strings.Cut(requestParts[i], ":")
-		headers[strings.Trim(key, " ")] = strings.Trim(value, " ")
+		headers[strings.ToLower(strings.Trim(key, " "))] = strings.Trim(value, " ")
 	}
 	return // named result parameters
 }
@@ -81,24 +81,31 @@ func dispatch(method string, urlPath string, headers map[string]string, body str
 		return "HTTP/1.1 200 OK\r\n\r\n"
 	} else if strings.HasPrefix(urlPath, "/echo/") {
 		text := urlPath[len("/echo/"):]
-		return contentResponse(text, "text/plain")
+		return contentResponse(text, "text/plain", headers)
 	} else if urlPath == "/user-agent" {
-		agent := headers["User-Agent"]
-		return contentResponse(agent, "text/plain")
+		agent := headers["user-agent"]
+		return contentResponse(agent, "text/plain", headers)
 	} else if strings.HasPrefix(urlPath, "/files/") {
 		fname := urlPath[len("/files/"):]
 		dat, err := os.ReadFile(path.Join(filesDir, fname))
 		if err != nil {
 			return "HTTP/1.1 404 Not Found\r\n\r\n"
 		}
-		return contentResponse(string(dat), "application/octet-stream")
+		return contentResponse(string(dat), "application/octet-stream", headers)
 	} else {
 		return "HTTP/1.1 404 Not Found\r\n\r\n"
 	}
 }
 
-func contentResponse(content, contentType string) string {
+func contentResponse(content string, contentType string, requestHeaders map[string]string) string {
+	compression := requestHeaders["accept-encoding"]
+	if compression == "gzip" {
+		compression = "Content-Encoding: gzip\r\n"
+	} else {
+		compression = ""
+	}
 	return "HTTP/1.1 200 OK\r\n" +
+		compression +
 		"Content-Type: " + contentType + "\r\n" +
 		"Content-Length: " + fmt.Sprint(len(content)) +
 		"\r\n" +
