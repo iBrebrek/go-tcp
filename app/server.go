@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"compress/gzip"
 	"flag"
 	"fmt"
 	"net"
@@ -103,6 +105,11 @@ func contentResponse(content string, contentType string, requestHeaders map[stri
 	if ok {
 		for _, elem := range strings.Split(values, ",") {
 			if strings.TrimSpace(elem) == "gzip" {
+				var buffer bytes.Buffer
+				w := gzip.NewWriter(&buffer)
+				w.Write([]byte(content))
+				w.Close()
+				content = buffer.String()
 				compression = "Content-Encoding: gzip\r\n"
 				break
 			}
