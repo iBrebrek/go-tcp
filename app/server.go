@@ -1,14 +1,21 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"net"
 	"os"
+	"path"
 	"strings"
 )
 
+var filesDir string
+
 func main() {
-	fmt.Println("Logs from your program will appear here!")
+	flag.StringVar(&filesDir, "directory", "./files", "specify a directory where files uploaded to server are saved")
+	flag.Parse()
+	fmt.Println("Saving files to: ", filesDir)
+	fmt.Println("Got args: ", os.Args)
 
 	l, err := net.Listen("tcp", "0.0.0.0:4221")
 	if err != nil {
@@ -54,28 +61,35 @@ func parseRequest(request string) (method string, path string, headers map[strin
 	return // named result parameters
 }
 
-func dispatch(method string, path string, headers map[string]string, body string) string {
+func dispatch(method string, urlPath string, headers map[string]string, body string) string {
 	if method != "GET" {
 		return "HTTP/1.1 405 Method Not Allowed\r\n\r\n"
 	}
 
-	if path == "/" || path == "/index.html" {
+	if urlPath == "/" || urlPath == "/index.html" {
 		return "HTTP/1.1 200 OK\r\n\r\n"
-	} else if strings.HasPrefix(path, "/echo/") {
-		text := path[len("/echo/"):]
-		return textResponse(text)
-	} else if path == "/user-agent" {
+	} else if strings.HasPrefix(urlPath, "/echo/") {
+		text := urlPath[len("/echo/"):]
+		return contentResponse(text, "text/plain")
+	} else if urlPath == "/user-agent" {
 		agent := headers["User-Agent"]
-		return textResponse(agent)
+		return contentResponse(agent, "text/plain")
+	} else if strings.HasPrefix(urlPath, "/files/") {
+		fname := urlPath[len("/files/"):]
+		dat, err := os.ReadFile(path.Join(filesDir, fname))
+		if err != nil {
+			return "HTTP/1.1 404 Not Found\r\n\r\n"
+		}
+		return contentResponse(string(dat), "application/octet-stream")
 	} else {
 		return "HTTP/1.1 404 Not Found\r\n\r\n"
 	}
 }
 
-func textResponse(text string) string {
+func contentResponse(content, contentType string) string {
 	return "HTTP/1.1 200 OK\r\n" +
-		"Content-Type: text/plain\r\n" +
-		"Content-Length: " + fmt.Sprint(len(text)) +
+		"Content-Type: " + contentType + "\r\n" +
+		"Content-Length: " + fmt.Sprint(len(content)) +
 		"\r\n" +
-		"\r\n" + text
+		"\r\n" + content
 }
