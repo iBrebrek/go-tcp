@@ -38,8 +38,8 @@ func main() {
 
 func handleConnection(conn net.Conn) {
 	buffer := make([]byte, 1024)
-	conn.Read(buffer)
-	request := string(buffer)
+	n, _ := conn.Read(buffer)
+	request := string(buffer[:n])
 	resp := dispatch(parseRequest(request))
 	conn.Write([]byte(resp))
 	fmt.Println("Handled")
@@ -63,7 +63,18 @@ func parseRequest(request string) (method string, path string, headers map[strin
 
 func dispatch(method string, urlPath string, headers map[string]string, body string) string {
 	if method != "GET" {
-		return "HTTP/1.1 405 Method Not Allowed\r\n\r\n"
+		if method == "POST" && strings.HasPrefix(urlPath, "/files/") {
+			fname := urlPath[len("/files/"):]
+			f, err := os.Create(path.Join(filesDir, fname))
+			if err != nil {
+				return "HTTP/1.1 422 Unprocessable Entity\r\n\r\n"
+			}
+			defer f.Close()
+			f.WriteString(body)
+			return "HTTP/1.1 201 Created\r\n\r\n"
+		} else {
+			return "HTTP/1.1 405 Method Not Allowed\r\n\r\n"
+		}
 	}
 
 	if urlPath == "/" || urlPath == "/index.html" {
