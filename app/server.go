@@ -98,11 +98,15 @@ func dispatch(method string, urlPath string, headers map[string]string, body str
 }
 
 func contentResponse(content string, contentType string, requestHeaders map[string]string) string {
-	compression := requestHeaders["accept-encoding"]
-	if compression == "gzip" {
-		compression = "Content-Encoding: gzip\r\n"
-	} else {
-		compression = ""
+	values, ok := requestHeaders["accept-encoding"]
+	compression := ""
+	if ok {
+		for _, elem := range strings.Split(values, ",") {
+			if strings.TrimSpace(elem) == "gzip" {
+				compression = "Content-Encoding: gzip\r\n"
+				break
+			}
+		}
 	}
 	return "HTTP/1.1 200 OK\r\n" +
 		compression +
